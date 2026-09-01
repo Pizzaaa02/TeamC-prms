@@ -21,6 +21,9 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
 
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, env.JWT_SECRET) as { userId: string };
+    if (typeof decoded.userId !== 'string' || !decoded.userId) {
+      return res.status(401).json({ success: false, error: { message: 'Invalid token' } });
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -42,11 +45,11 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
 
     next();
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({ success: false, error: { message: 'Invalid token' } });
-    }
     if (error instanceof jwt.TokenExpiredError) {
       return res.status(401).json({ success: false, error: { message: 'Token expired' } });
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({ success: false, error: { message: 'Invalid token' } });
     }
     next(error);
   }

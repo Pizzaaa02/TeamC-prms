@@ -148,23 +148,17 @@ export class AuthController {
 
   googleLogin = async (req: Request, res: Response) => {
     try {
-      const { idToken, email, displayName } = req.body;
+      const { idToken } = req.body;
 
       let isNewUser = false;
-      let firebaseUid: string;
-
-      if (env.ENABLE_FIREBASE_VERIFY === true) {
-        if (!idToken) {
-          throw new Error('Firebase ID token required');
-        }
-
-        firebaseUid = await verifyFirebaseToken(idToken);
-      } else {
-        if (!email) {
-          throw new Error('Email is required when Firebase verification is disabled');
-        }
-        firebaseUid = `dev-${email.toLowerCase()}`;
+      if (!env.ENABLE_FIREBASE_VERIFY) {
+        return res.status(503).json({ success: false, error: { message: 'Google sign-in is not configured' } });
       }
+      if (typeof idToken !== 'string' || !idToken.trim()) {
+        throw new Error('Firebase ID token required');
+      }
+      // Identity and account linking must use signed claims, never browser-supplied email.
+      const { uid: firebaseUid, email, name: displayName } = await verifyFirebaseToken(idToken);
 
       // Step 1: find by firebase_uid
       let user = await prisma.user.findUnique({ where: { firebase_uid: firebaseUid }, include: { UserRole: { include: { role: true } } } });
@@ -174,6 +168,7 @@ export class AuthController {
         user = await prisma.user.findUnique({ where: { email }, include: { UserRole: { include: { role: true } } } });
 
         if (user) {
+          if (!user.is_active) throw new Error('Account is suspended');
           // A "local-*" firebase_uid is a placeholder for password-based accounts
           // (no real Firebase identity yet), so it's free to link to this Google account.
           const hasRealFirebaseLink = user.firebase_uid && !user.firebase_uid.startsWith('local-');

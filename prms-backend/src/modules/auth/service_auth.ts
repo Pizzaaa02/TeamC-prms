@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { createHash, randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../../db';
@@ -52,19 +53,21 @@ export async function loginUser(email: string, password: string) {
 
 export function generateTokens(userId: string) {
   const accessToken = jwt.sign({ userId }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRY } as jwt.SignOptions);
-  const refreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRY } as jwt.SignOptions);
+  const refreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRY, jwtid: randomUUID() } as jwt.SignOptions);
   return { accessToken, refreshToken };
 }
 
 export async function saveRefreshToken(userId: string, refreshToken: string) {
-  const hash = await bcrypt.hash(refreshToken, 10);
+  // JWTs exceed bcrypt's 72-byte limit. Hash the entire token before bcrypt.
+  const hash = await bcrypt.hash(createHash('sha256').update(refreshToken).digest('hex'), 10);
   await prisma.user.update({ where: { id: userId }, data: { refreshToken: hash } });
 }
 
 export async function verifyRefreshToken(userId: string, refreshToken: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || !user.refreshToken) throw new Error('No refresh token found');
-  const valid = await bcrypt.compare(refreshToken, user.refreshToken);
+  if (!user.is_active) throw new Error('Account is suspended');
+  const valid = await bcrypt.compare(createHash('sha256').update(refreshToken).digest('hex'), user.refreshToken);
   if (!valid) throw new Error('Invalid refresh token');
   return user;
 }

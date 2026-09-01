@@ -35,11 +35,15 @@ function getFirebaseApp(): App {
 
 export async function verifyFirebaseToken(
   token: string
-): Promise<string> {
+): Promise<{ uid: string; email: string; name?: string }> {
   const app = getFirebaseApp();
 
   const decodedToken =
-    await getAuth(app).verifyIdToken(token);
+    await getAuth(app).verifyIdToken(token, true);
 
-  return decodedToken.uid;
+  if (!decodedToken.email || !decodedToken.email_verified ||
+      decodedToken.firebase.sign_in_provider !== 'google.com') {
+    throw new Error('A verified Google account is required');
+  }
+  return { uid: decodedToken.uid, email: decodedToken.email.toLowerCase(), name: decodedToken.name };
 }
