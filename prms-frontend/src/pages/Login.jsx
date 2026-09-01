@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Building2, Eye, EyeOff, LockKeyhole, LogIn, Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { signInWithGoogle } from '../firebase';
+import { useRegistration } from '../contexts/RegistrationContext';
 
 function Login() {
   const navigate = useNavigate();
+  const { clearRegistration } = useRegistration();
+  // Clear onboarding only after arriving here; clearing it on /register can
+  // trigger the role guard before navigation finishes.
+  useEffect(() => { clearRegistration(); }, [clearRegistration]);
   const { login, googleLogin, error, clearError, loading } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -14,12 +19,14 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [remember, setRemember] = useState(false);
+  const [googleError, setGoogleError] = useState('');
 
   async function handleSubmit(e) {
     if (e) e.preventDefault();
     if (submitting) return;
 
     clearError();
+    setGoogleError('');
     setSubmitting(true);
 
     const result = await login({ email, password }, navigate);
@@ -34,13 +41,20 @@ function Login() {
 
   /* AUTH-009: Google OAuth login handler */
   async function handleGoogleLogin() {
+    if (submitting) return;
     clearError();
+    setGoogleError('');
+    setSubmitting(true);
     try {
       const googleAuth = await signInWithGoogle();
       await googleLogin(googleAuth,navigate);
     } 
     catch (err) {
-      console.error('Google login failed', err);
+      setGoogleError(err.code === 'auth/popup-closed-by-user'
+        ? 'Google sign-in was cancelled. Please try again.'
+        : 'Google sign-in failed. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -212,14 +226,14 @@ function Login() {
             </motion.div>
 
             {/* Error message */}
-            {error && (
+            {(error || googleError) && (
               <motion.div
                 className="login-error"
                 role="alert"
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                {error}
+                {error || googleError}
               </motion.div>
             )}
 
@@ -256,6 +270,7 @@ function Login() {
               <motion.button
                 type="button"
                 onClick={handleGoogleLogin}
+                disabled={submitting || loading}
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
               >

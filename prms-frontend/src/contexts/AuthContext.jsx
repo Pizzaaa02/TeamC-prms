@@ -67,10 +67,10 @@ function AuthProvider({ children }) {
 
   const register = useCallback(
     async (data, navigate) => {
-      dispatch({ type: ACTIONS.SET_LOADING, payload: true });
       dispatch({ type: ACTIONS.CLEAR_ERROR });
       try {
         await authApi.register(data);
+        dispatch({ type: ACTIONS.SET_LOADING, payload: false });
         // After successful register, redirect to login page so user can authenticate
         // Then the login function will redirect to the proper dashboard based on role
         if (navigate) navigate(ROUTES.public.login);

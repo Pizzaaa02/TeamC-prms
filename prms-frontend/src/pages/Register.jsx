@@ -10,7 +10,6 @@ import {
   User,
   UserPlus,
   Phone,
-  MapPin,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useRegistration } from '../contexts/RegistrationContext';
@@ -67,15 +66,14 @@ function Register() {
         phone: formData.phone,
         password: formData.password,
         role: selectedRole,
-      },
-      navigate
+      }
     );
 
     if (!result.success) {
-      clearError();
+      setFormError(result.error || 'Registration failed. Please try again.');
     } else {
-      /* Issue #7: Clear registration state after successful registration */
-      clearRegistration();
+      // Login clears registration state after navigation has completed.
+      navigate('/login', { replace: true });
     }
 
     setSubmitting(false);

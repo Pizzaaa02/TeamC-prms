@@ -8,7 +8,6 @@ import { UserPreferencesProvider } from './contexts/UserPreferencesContext';
 import { FeatureFlagsProvider } from './contexts/FeatureFlagsContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import RoleSelectionGuard from './components/RoleSelectionGuard';
-import LoginGuard from './components/LoginGuard';
 import PublicPageTransition from './components/PublicPageTransition';
 
 /*  Public pages  */
@@ -72,7 +71,6 @@ const LandlordBookings = lazy(() => import('./pages/LandlordBookings'));
 const AdminBookings = lazy(() => import('./pages/AdminBookings'));
 const TenantPayments = lazy(() => import('./pages/TenantPayments'));
 const TenantMaintenance = lazy(() => import('./pages/TenantMaintenance'));
-const LandlordMaintenance = lazy(() => import('./pages/LandlordMaintenance'));
 const AgentMaintenance = lazy(() => import('./pages/AgentMaintenance'));
 const AdminReports = lazy(() => import('./pages/AdminReports'));
 const AdminAuditLogs = lazy(() => import('./pages/AdminAuditLogs'));
@@ -110,9 +108,11 @@ function AppRoutes() {
       <Route
         path="/properties/edit/:id"
         element={
-          <SuspenseWrapper>
-            <PropertyEdit />
-          </SuspenseWrapper>
+          <ProtectedRoute allowedRoles={['Admin', 'Landlord']}>
+            <SuspenseWrapper>
+              <PropertyEdit />
+            </SuspenseWrapper>
+          </ProtectedRoute>
         }
       />
       <Route
@@ -139,11 +139,9 @@ function AppRoutes() {
         path="/login"
         element={
           <PublicRoute>
-            <LoginGuard>
-              <PublicPageTransition>
-                <Login />
-              </PublicPageTransition>
-            </LoginGuard>
+            <PublicPageTransition>
+              <Login />
+            </PublicPageTransition>
           </PublicRoute>
         }
       />
@@ -250,6 +248,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<LandlordDashboard />} />
+        <Route path="dashboard" element={<LandlordDashboard />} />
         <Route
           path="notifications"
           element={
@@ -307,6 +306,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<TenantDashboard />} />
+        <Route path="dashboard" element={<TenantDashboard />} />
         <Route
           path="notifications"
           element={
@@ -354,6 +354,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<AgentDashboard />} />
+        <Route path="dashboard" element={<AgentDashboard />} />
         <Route
           path="notifications"
           element={

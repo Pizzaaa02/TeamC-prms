@@ -17,7 +17,8 @@ export function ProtectedRoute({ children, allowedRoles }) {
   }
 
   // Issue #11: Strengthen role-based route protection — case-insensitive matching
-  if (allowedRoles && allowedRoles.length > 0 && user?.role) {
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!user?.role) return <Navigate to="/login" replace />;
     const userRole = user.role.toLowerCase();
     const hasAccess = allowedRoles.some(
       (role) => role.toLowerCase() === userRole
