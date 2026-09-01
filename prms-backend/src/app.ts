@@ -1,8 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { initializeApp, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirebaseApp } from './modules/auth/firebase_auth';
 import { env } from './config';
 import { prisma } from './db';
 import path from 'path';
@@ -25,16 +25,7 @@ import categoryRoutes from './modules/category/routes_category';
 import themeRoutes from './modules/theme/routes_theme';
 import favoriteRoutes from './modules/favorite/routes_favorite';
 
-// Initialize Firebase if possible
-if (getApps().length === 0) {
-  try {
-    initializeApp({
-      credential: env.GCP_SA_KEY ? JSON.parse(env.GCP_SA_KEY) : { projectId: 'prms-local' },
-    });
-  } catch {
-    console.log('[Firebase] Running without credential (local mode)');
-  }
-}
+// Firebase is initialized lazily by the shared, credential-aware auth helper.
 
 const app = express();
 const router = express.Router();
@@ -91,7 +82,7 @@ router.post('/auth/verify', async (req, res) => {
   try {
     const { token } = req.body;
     if (!token) return res.status(401).json({ error: 'Missing Firebase token' });
-    const decodedToken = await getAuth().verifyIdToken(token);
+    const decodedToken = await getAuth(getFirebaseApp()).verifyIdToken(token, true);
     res.json({ userId: decodedToken.uid, email: decodedToken.email, name: decodedToken.name });
   } catch (error) { res.status(401).json({ error: 'Invalid Firebase token' }); }
 });
