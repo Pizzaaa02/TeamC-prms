@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:auth": "node ../prms-backend/node_modules/jest/bin/jest.js --config jest.config.cjs --runInBand",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",

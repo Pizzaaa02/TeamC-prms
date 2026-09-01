@@ -158,6 +158,32 @@ describe('Protected routes and sessions', () => {
 });
 
 describe('Google sign-in (Firebase verification boundary simulated)', () => {
+  test('upgrades a legacy dev-email placeholder only after verified Google login', async () => {
+    const local = await register();
+    await prisma.user.update({ where: { id: local.body.data.user.id }, data: { firebase_uid: `dev-${signup.email}` } });
+    verifyFirebaseToken.mockResolvedValue({ uid: 'real-google-uid', email: signup.email });
+    const login = await request('/auth/google', { idToken: 'verified-test-token' });
+    expect(login.status).toBe(200);
+    expect(login.body.data.user.id).toBe(local.body.data.user.id);
+    expect((await prisma.user.findUnique({ where: { email: signup.email } })).firebase_uid).toBe('real-google-uid');
+  });
+  test.each(['Landlord', 'Agent'])('Google onboarding changes the canonical role to %s', async role => {
+    verifyFirebaseToken.mockResolvedValue({ uid: 'onboarding-user', email: 'onboarding@example.test' });
+    const signedIn = await request('/auth/google', { idToken: 'test-token' });
+    const token = signedIn.body.data.tokens.accessToken;
+    expect((await request('/auth/me', { role }, token, 'PUT')).status).toBe(200);
+    const me = await request('/auth/me', undefined, token);
+    expect(me.body.data.role).toBe(role);
+    expect(await prisma.userRole.count({ where: { userId: signedIn.body.data.user.id } })).toBe(1);
+    const login = await request('/auth/google', { idToken: 'test-token' });
+    expect(login.body.data.user.role).toBe(role);
+  });
+  test('a rejected onboarding role leaves the existing role intact', async () => {
+    const signedIn = await register();
+    const token = signedIn.body.data.tokens.accessToken;
+    expect((await request('/auth/me', { role: 'Admin' }, token, 'PUT')).status).toBe(400);
+    expect((await request('/auth/me', undefined, token)).body.data.role).toBe('Tenant');
+  });
   test('fails closed when verification is disabled', async () => {
     env.ENABLE_FIREBASE_VERIFY = false;
     expect((await request('/auth/google', { email: signup.email })).status).toBe(503);
