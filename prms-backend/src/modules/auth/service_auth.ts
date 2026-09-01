@@ -99,11 +99,12 @@ export async function updateUserProfile(
     }
     const role = await prisma.role.findUnique({ where: { name: data.role } });
     if (!role) throw new Error(`Role ${data.role} not found`);
-    await prisma.userRole.upsert({
-      where: { userId_roleId: { userId, roleId: role.id } },
-      update: {},
-      create: { userId, roleId: role.id },
-    });
+    // The application exposes one active role. Adding a second association
+    // leaves the default Tenant role first, so onboarding never takes effect.
+    await prisma.$transaction([
+      prisma.userRole.deleteMany({ where: { userId } }),
+      prisma.userRole.create({ data: { userId, roleId: role.id } }),
+    ]);
   }
 
   const { role, ...userFields } = data;

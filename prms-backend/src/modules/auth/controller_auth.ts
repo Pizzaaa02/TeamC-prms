@@ -171,7 +171,10 @@ export class AuthController {
           if (!user.is_active) throw new Error('Account is suspended');
           // A "local-*" firebase_uid is a placeholder for password-based accounts
           // (no real Firebase identity yet), so it's free to link to this Google account.
-          const hasRealFirebaseLink = user.firebase_uid && !user.firebase_uid.startsWith('local-');
+          // Legacy development logins stored dev-<email>, not a Firebase UID.
+          // Upgrade only the placeholder matching this verified email.
+          const isLegacyPlaceholder = user.firebase_uid === `dev-${email.toLowerCase()}`;
+          const hasRealFirebaseLink = user.firebase_uid && !user.firebase_uid.startsWith('local-') && !isLegacyPlaceholder;
           if (hasRealFirebaseLink && user.firebase_uid !== firebaseUid) {
             throw new Error('Google account already linked');
           }
