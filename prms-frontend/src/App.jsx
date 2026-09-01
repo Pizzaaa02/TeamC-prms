@@ -6,7 +6,7 @@ import { SettingsProvider } from './contexts/SettingsContext';
 import { CustomizationProvider } from './contexts/CustomizationContext';
 import { UserPreferencesProvider } from './contexts/UserPreferencesContext';
 import { FeatureFlagsProvider } from './contexts/FeatureFlagsContext';
-import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
+import { ProtectedRoute, PublicRoute, RoleSelectionRoute } from './components/ProtectedRoute';
 import RoleSelectionGuard from './components/RoleSelectionGuard';
 import PublicPageTransition from './components/PublicPageTransition';
 
@@ -128,11 +128,11 @@ function AppRoutes() {
       <Route
         path="/role-selection"
         element={
-          <PublicRoute>
+          <RoleSelectionRoute>
             <PublicPageTransition>
               <RoleSelection />
             </PublicPageTransition>
-          </PublicRoute>
+          </RoleSelectionRoute>
         }
       />
       <Route

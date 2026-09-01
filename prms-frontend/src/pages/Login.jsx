@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Building2, Eye, EyeOff, LockKeyhole, LogIn, Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { signInWithGoogle } from '../firebase';
+import { googleAuthErrorMessage } from '../utils/googleAuthErrors';
 import { useRegistration } from '../contexts/RegistrationContext';
 
 function Login() {
@@ -50,9 +51,7 @@ function Login() {
       await googleLogin(googleAuth,navigate);
     } 
     catch (err) {
-      setGoogleError(err.code === 'auth/popup-closed-by-user'
-        ? 'Google sign-in was cancelled. Please try again.'
-        : 'Google sign-in failed. Please try again.');
+      setGoogleError(googleAuthErrorMessage(err));
     } finally {
       setSubmitting(false);
     }

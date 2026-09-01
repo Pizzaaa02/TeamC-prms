@@ -13,10 +13,12 @@ import { roleToPath } from '../config/routes';
 
 function RoleSelection() {
   const navigate = useNavigate();
-  const { updateProfile } = useAuth();
+  const { updateProfile, isAuthenticated } = useAuth();
   const { setSelectedRole: setContextRole } = useRegistration();
   /* Issue #4: Default to null so user must explicitly pick a role */
   const [selectedRole, setSelectedRole] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const roles = [
     {
@@ -46,17 +48,24 @@ function RoleSelection() {
 
   async function handleContinue() {
     /* Issue #4: Guard — don't proceed without role selection */
-    if (!selectedRole) return;
+    if (!selectedRole || submitting) return;
+    setError('');
 
     const role = roles.find((item) => item.key === selectedRole);
     const title = role?.title || 'Tenant';
 
     /* Issue #3: Check if this is a Google onboarding flow (already authenticated) */
-    const isOnboarding = localStorage.getItem('prmsOnboarding') === 'true';
+    const isOnboarding = isAuthenticated && localStorage.getItem('prmsOnboarding') === 'true';
 
     if (isOnboarding) {
       /* Update user's role from default Tenant to selected role */
-      await updateProfile({ role: title });
+      setSubmitting(true);
+      const result = await updateProfile({ role: title });
+      setSubmitting(false);
+      if (!result.success) {
+        setError(result.error || 'Unable to save your role. Please try again.');
+        return;
+      }
       /* Clear onboarding flags */
       localStorage.removeItem('prmsOnboarding');
       /* Navigate to the selected role's dashboard */
@@ -193,11 +202,12 @@ function RoleSelection() {
             })}
           </div>
 
+          {error && <p role="alert" className="login-error">{error}</p>}
           <motion.button
             type="button"
             className="continue-btn"
             onClick={handleContinue}
-            disabled={!selectedRole}
+            disabled={!selectedRole || submitting}
             style={selectedRole ? {} : { opacity: 0.5, cursor: 'not-allowed' }}
             initial={{ y: 24, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -205,7 +215,7 @@ function RoleSelection() {
             whileHover={selectedRole ? { y: -3, scale: 1.01 } : {}}
             whileTap={selectedRole ? { scale: 0.97 } : {}}
           >
-            Continue <ArrowRight size={24} />
+            {submitting ? 'Saving...' : 'Continue'} <ArrowRight size={24} />
           </motion.button>
 
           <motion.p

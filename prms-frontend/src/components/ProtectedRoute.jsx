@@ -48,3 +48,13 @@ export function PublicRoute({ children }) {
 
   return children;
 }
+
+/** Google users are already signed in when they choose their initial role. */
+export function RoleSelectionRoute({ children }) {
+  const { loading, isAuthenticated, user } = useAuth();
+  if (loading) return null;
+  if (isAuthenticated && localStorage.getItem('prmsOnboarding') !== 'true') {
+    return <Navigate to={roleToPath(user?.role)} replace />;
+  }
+  return children;
+}
